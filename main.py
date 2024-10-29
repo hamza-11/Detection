@@ -1,14 +1,20 @@
-from flask import Flask, Response, jsonify
-from flask_cors import CORS
+from fastapi import FastAPI, Response
+from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 import cv2
 import numpy as np
 import threading
-import time
-from datetime import datetime
 import logging
 
-app = Flask(__name__)
-CORS(app)
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # يمكنك تحديد نطاقات معينة بدلاً من "*"
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # تهيئة متغيرات عامة
 camera = None
@@ -109,15 +115,16 @@ def generate_frames():
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
-@app.route('/video_feed')
-def video_feed():
-    return Response(generate_frames(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+@app.get('/video_feed')
+async def video_feed():
+    return StreamingResponse(generate_frames(),
+                             media_type='multipart/x-mixed-replace; boundary=frame')
 
-@app.route('/get_detections')
-def get_detections():
+@app.get('/get_detections')
+async def get_detections():
     global detected_objects
-    return jsonify(detected_objects)
+    return detected_objects
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5100, debug=True)
+    import uvicorn
+    uvicorn.run(app, host='0.0.0.0', port=5000, debug=True)
