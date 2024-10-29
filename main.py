@@ -8,7 +8,7 @@ CORS(app)
 # ضع مسار صوت الإنذار هنا
 
 # تحميل نموذج MobileNet-SSD
-net = cv2.dnn.readNetFromCaffe("deploy.prototxt", "mobilenet.caffemodel")
+net = cv2.dnn.readNetFromCaffe("deploy.prototxt", "mobilenet_iter_73000.caffemodel")
 CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
            "bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
            "dog", "horse", "motorbike", "person", "pottedplant", "sheep",
