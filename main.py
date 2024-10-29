@@ -1,13 +1,11 @@
 import cv2
-import pygame
 from flask import Flask, jsonify, Response
 from flask_cors import CORS
 
 # تهيئة التطبيق والصوت
 app = Flask(__name__)
 CORS(app)
-pygame.mixer.init()
-pygame.mixer.music.load("alarm_sound.wav")  # ضع مسار صوت الإنذار هنا
+# ضع مسار صوت الإنذار هنا
 
 # تحميل نموذج MobileNet-SSD
 net = cv2.dnn.readNetFromCaffe("deploy.prototxt", "mobilenet.caffemodel")
@@ -40,8 +38,7 @@ def detect_objects():
                     detected_objects.append(CLASSES[idx])
 
                     # تشغيل الإنذار إذا لم يكن قيد التشغيل
-                    if not pygame.mixer.music.get_busy():
-                        pygame.mixer.music.play()
+                    
 
         # كسر الحلقة بعد التشغيل لتجنب الإفراط في استخدام الكاميرا
         break
