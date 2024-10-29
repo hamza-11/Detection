@@ -1,58 +1,57 @@
+from flask import Flask, render_template
+from flask_socketio import SocketIO
 import cv2
-import pygame
-from flask import Flask, jsonify, Response
-from flask_cors import CORS
+import numpy as np
+import time
 
-# تهيئة التطبيق والصوت
 app = Flask(__name__)
-CORS(app)
-pygame.mixer.init()
-pygame.mixer.music.load("alarm_sound.wav")  # ضع مسار صوت الإنذار هنا
+socketio = SocketIO(app)
 
-# تحميل نموذج MobileNet-SSD
-net = cv2.dnn.readNetFromCaffe("deploy.prototxt", "mobilenet.caffemodel")
-CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
-           "bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
-           "dog", "horse", "motorbike", "person", "pottedplant", "sheep",
-           "sofa", "train", "tvmonitor"]
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 def detect_objects():
-    cap = cv2.VideoCapture(0)
-    detected_objects = []
+    # إعداد نموذج الكشف عن الكائنات
+    net = cv2.dnn.readNetFromCaffe("deploy.prototxt", "mobilenet_iter_73000.caffemodel")
+    layer_names = net.getLayerNames()
+    output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 
-    while cap.isOpened():
+    # افتح كاميرا الويب
+    cap = cv2.VideoCapture(0)
+
+    while True:
         ret, frame = cap.read()
         if not ret:
             break
-
-        # تمرير الصورة عبر الشبكة
-        (h, w) = frame.shape[:2]
-        blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 0.007843, (300, 300), 127.5)
+        
+        # قم بإعداد الإطار للكشف
+        height, width = frame.shape[:2]
+        blob = cv2.dnn.blobFromImage(frame, 0.007843, (300, 300), 127.5)
         net.setInput(blob)
-        detections = net.forward()
+        detections = net.forward(output_layers)
 
-        detected_objects.clear()  # إعادة ضبط الكائنات المكتشفة
-        for i in range(detections.shape[2]):
-            confidence = detections[0, 0, i, 2]
-            if confidence > 0.2:
-                idx = int(detections[0, 0, i, 1])
-                if CLASSES[idx] in ["person", "car", "bus", "bicycle", "motorbike"]:
-                    detected_objects.append(CLASSES[idx])
+        for detection in detections:
+            for result in detection:
+                confidence = result[2]
+                if confidence > 0.5:  # يمكن تعديل هذه القيمة لتقليل أو زيادة الحساسية
+                    # يمكن إضافة كود لتحليل الكشف هنا
+                    socketio.emit('alert', {'message': 'Object detected!'})
+                    break  # للخروج من الحلقة بعد اكتشاف كائن
 
-                    # تشغيل الإنذار إذا لم يكن قيد التشغيل
-                    if not pygame.mixer.music.get_busy():
-                        pygame.mixer.music.play()
+        time.sleep(1)  # تأخير لمحاكاة الكشف
 
-        # كسر الحلقة بعد التشغيل لتجنب الإفراط في استخدام الكاميرا
-        break
+        # أضف شرط للخروج من الحلقة
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
     cap.release()
-    return detected_objects
+    cv2.destroyAllWindows()
 
-@app.route('/detect', methods=['GET'])
-def detect():
-    detected = detect_objects()
-    return jsonify({"detected_objects": detected})
+@socketio.on('connect')
+def handle_connect():
+    print("Client connected")
 
-if __name__ == "__main__":
-    app.run(debug=True)
+if __name__ == '__main__':
+    socketio.start_background_task(detect_objects)  # بدء عملية الكشف في الخلفية
+    socketio.run(app, host='0.0.0.0', port=5000)
