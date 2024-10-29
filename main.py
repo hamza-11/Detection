@@ -27,7 +27,7 @@ COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 
 # تحميل نموذج Caffe
 print("[INFO] تحميل النموذج...")
-net = cv2.dnn.readNetFromCaffe("deploy.prototxt", "mobilenet.caffemodel")
+net = cv2.dnn.readNetFromCaffe("deploy.prototxt", "mobilenet_iter_73000.caffemodel")
 
 def detect_motion(frame):
     detected = []
