@@ -1,13 +1,22 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from ultralytics import YOLO
 import cv2
 import numpy as np
-from io import BytesIO
 
 app = FastAPI()
 
+# السماح بتفعيل CORS لجميع النطاقات
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # يمكنك تحديد النطاقات المسموح لها بدلاً من "*" إذا أردت
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # تحميل نموذج YOLO مدرب على كشف الأشخاص، السيارات، والدراجات
-model = YOLO("yolov5s.pt")  # يمكنك اختيار نموذج مختلف إذا لزم الأمر
+model = YOLO("yolov5s.pt")
 
 @app.post("/detect")
 async def detect_objects(file: UploadFile = File(...)):
@@ -44,3 +53,4 @@ async def detect_objects(file: UploadFile = File(...)):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
